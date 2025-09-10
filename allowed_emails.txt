@@ -3,3 +3,4 @@ user2@example.com
 admin@company.com
 test@domain.org
 will@sylvian.ai
+testifthisnewemailworks.com
