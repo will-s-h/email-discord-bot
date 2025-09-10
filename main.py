@@ -5,6 +5,7 @@ import asyncio
 from dotenv import load_dotenv
 import os
 import resend
+from aiohttp import web
 
 load_dotenv()
 
@@ -12,6 +13,8 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 resend.api_key = os.getenv("RESEND_API_KEY")
 ALLOWED_EMAILS_FILEPATH = os.getenv('EMAILS_FILEPATH', 'allowed_emails.txt')
+HOST = os.getenv('HOST', '0.0.0.0')
+PORT = int(os.getenv('PORT', '10000'))
 
 # Allowed emails list - only these emails can verify
 # Load allowed emails from file
@@ -37,9 +40,30 @@ verified_users = {}  # {user_id: email}
 
 VERIFIED_ROLE = "verified"
 
+web_server_started = False
+
+async def start_web_server():
+    app = web.Application()
+
+    async def health(_request):
+        return web.Response(text="OK")
+
+    app.router.add_get('/', health)
+    app.router.add_get('/health', health)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, HOST, PORT)
+    await site.start()
+    print(f"HTTP server listening on {HOST}:{PORT}")
+
 @bot.event
 async def on_ready():
     print(f"Email verification bot ready: {bot.user.name if bot.user else 'Unknown'}")
+    global web_server_started
+    if not web_server_started:
+        asyncio.create_task(start_web_server())
+        web_server_started = True
 
 @bot.event
 async def on_member_join(member):
@@ -293,8 +317,11 @@ async def add_email(ctx, email: str):
 @commands.has_permissions(administrator=True)
 async def list_emails(ctx):
     """List all allowed emails (Admin only)"""
-    emails = "\n".join(ALLOWED_EMAILS)
-    embed = discord.Embed(title="Allowed Emails", description=emails, color=0x0099ff)
+    if len(ALLOWED_EMAILS) > 10:
+        emails = "\n".join(ALLOWED_EMAILS[:5] + ["..."] + ALLOWED_EMAILS[-5:])
+    else:
+        emails = "\n".join(ALLOWED_EMAILS)
+    embed = discord.Embed(title=f"Allowed Emails ({len(ALLOWED_EMAILS)})", description=emails, color=0x0099ff)
     await ctx.send(embed=embed)
 
 if __name__ == "__main__":

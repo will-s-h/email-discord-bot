@@ -1,0 +1,2 @@
+in order to add emails to list, either use !add_email as an admin (only adds to memory, will reset if server ever goes down)
+or, push a new commit to allowed_emails.txt, and restart deployment on render

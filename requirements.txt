@@ -1,3 +1,4 @@
 discord.py
 python-dotenv
 resend
+aiohttp>=3.8.0
